@@ -8,50 +8,29 @@ import android.content.IntentFilter;
 import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
+import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
 import com.example.xyzreader.data.ItemsContract;
 import com.example.xyzreader.data.UpdaterService;
-import com.squareup.picasso.Picasso;
-
-import org.jetbrains.annotations.NotNull;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.Locale;
-/*
- * Lyla says:
- * “This app is starting to shape up but it feels a bit off in quite a few places. I can't put finger on it but it feels odd.”
- *
- * Jay says:
- * “Is the text supposed to be so wonky and unreadable? It is not accessible to those of us without perfect vision."
- *
- * Kagure says:
- * “The color scheme is really sad and I shouldn't feel sad.”
- *
- * https://review.udacity.com/#!/projects/4035898751/rubric
- *
- * put a nice grid or list in the main activity (maybe use cards?)
- * change contrast of the text
- * detail view in general is to fix
- * it flickers and it's slow
- */
-
 
 /**
  * An activity representing a list of Articles. This activity has different presentations for
@@ -63,11 +42,13 @@ public class ArticleListActivity extends AppCompatActivity implements
         LoaderManager.LoaderCallbacks<Cursor> {
 
     private static final String TAG = ArticleListActivity.class.toString();
+    private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss", Locale.GERMAN);
+
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
-    private SimpleDateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.GERMAN);
+    private SimpleDateFormat outputFormat = new SimpleDateFormat();
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
 
@@ -75,9 +56,17 @@ public class ArticleListActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
-        mSwipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
-        mRecyclerView = findViewById(R.id.recycler_view);
+
+        mToolbar = (Toolbar) findViewById(R.id.toolbar);
+
+
+//        final View toolbarContainerView = findViewById(R.id.toolbar_container);
+
+        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
+
+        mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         getLoaderManager().initLoader(0, null, this);
+
         if (savedInstanceState == null) {
             refresh();
         }
@@ -127,8 +116,9 @@ public class ArticleListActivity extends AppCompatActivity implements
         adapter.setHasStableIds(true);
         mRecyclerView.setAdapter(adapter);
         int columnCount = getResources().getInteger(R.integer.list_column_count);
-        GridLayoutManager glm = new GridLayoutManager(this, columnCount);
-        mRecyclerView.setLayoutManager(glm);
+        StaggeredGridLayoutManager sglm =
+                new StaggeredGridLayoutManager(columnCount, StaggeredGridLayoutManager.VERTICAL);
+        mRecyclerView.setLayoutManager(sglm);
     }
 
     @Override
@@ -139,7 +129,7 @@ public class ArticleListActivity extends AppCompatActivity implements
     private class Adapter extends RecyclerView.Adapter<ViewHolder> {
         private Cursor mCursor;
 
-        Adapter(Cursor cursor) {
+        public Adapter(Cursor cursor) {
             mCursor = cursor;
         }
 
@@ -149,7 +139,6 @@ public class ArticleListActivity extends AppCompatActivity implements
             return mCursor.getLong(ArticleLoader.Query._ID);
         }
 
-        @NotNull
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View view = getLayoutInflater().inflate(R.layout.list_item_article, parent, false);
@@ -169,7 +158,7 @@ public class ArticleListActivity extends AppCompatActivity implements
                 String date = mCursor.getString(ArticleLoader.Query.PUBLISHED_DATE);
                 return dateFormat.parse(date);
             } catch (ParseException ex) {
-                Log.e(TAG, String.valueOf(ex));
+                Log.e(TAG, ex.getMessage());
                 Log.i(TAG, "passing today's date");
                 return new Date();
             }
@@ -188,21 +177,17 @@ public class ArticleListActivity extends AppCompatActivity implements
                                 System.currentTimeMillis(), DateUtils.HOUR_IN_MILLIS,
                                 DateUtils.FORMAT_ABBREV_ALL).toString()
                                 + "<br/>" + " by "
-                                + mCursor.getString(ArticleLoader.Query.AUTHOR),
-                        Html.FROM_HTML_MODE_LEGACY));
+                                + mCursor.getString(ArticleLoader.Query.AUTHOR)));
             } else {
                 holder.subtitleView.setText(Html.fromHtml(
                         outputFormat.format(publishedDate)
                         + "<br/>" + " by "
-                        + mCursor.getString(ArticleLoader.Query.AUTHOR), Html.FROM_HTML_MODE_LEGACY));
+                        + mCursor.getString(ArticleLoader.Query.AUTHOR)));
             }
-            Picasso.get()
-                    .load(mCursor.getString(ArticleLoader.Query.THUMB_URL))
-                    //.resize(200, 200)
-                    .fit()
-                    .centerInside()
-                    .into(holder.thumbnailView);
-            //holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
+            holder.thumbnailView.setImageUrl(
+                    mCursor.getString(ArticleLoader.Query.THUMB_URL),
+                    ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
+            holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
         }
 
         @Override
@@ -211,16 +196,16 @@ public class ArticleListActivity extends AppCompatActivity implements
         }
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView thumbnailView;
-        TextView titleView;
-        TextView subtitleView;
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        public DynamicHeightNetworkImageView thumbnailView;
+        public TextView titleView;
+        public TextView subtitleView;
 
-        ViewHolder(View view) {
+        public ViewHolder(View view) {
             super(view);
-            thumbnailView = view.findViewById(R.id.thumbnail);
-            titleView = view.findViewById(R.id.article_title);
-            subtitleView = view.findViewById(R.id.article_subtitle);
+            thumbnailView = (DynamicHeightNetworkImageView) view.findViewById(R.id.thumbnail);
+            titleView = (TextView) view.findViewById(R.id.article_title);
+            subtitleView = (TextView) view.findViewById(R.id.article_subtitle);
         }
     }
 }

@@ -9,16 +9,16 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Typeface;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.Locale;
 
 import android.os.Bundle;
+import android.support.v4.app.ShareCompat;
+import android.support.v7.graphics.Palette;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.text.method.LinkMovementMethod;
@@ -28,9 +28,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-
-import androidx.core.app.ShareCompat;
-import androidx.palette.graphics.Palette;
 
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
@@ -65,14 +62,13 @@ public class ArticleDetailFragment extends Fragment implements
     private int mScrollY;
     private boolean mIsCard = false;
     private int mStatusBarFullOpacityBottom;
-    private View mMetaBar;
 
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss", Locale.GERMAN);
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
     // Use default locale format
-    private SimpleDateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.sss", Locale.GERMAN);
+    private SimpleDateFormat outputFormat = new SimpleDateFormat();
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
-
+    private View mMetaBar;
     /**
      * Mandatory empty constructor for the fragment manager to instantiate the
      * fragment (e.g. upon screen orientation changes).
@@ -121,7 +117,8 @@ public class ArticleDetailFragment extends Fragment implements
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState) {
         mRootView = inflater.inflate(R.layout.fragment_article_detail, container, false);
-        mDrawInsetsFrameLayout = mRootView.findViewById(R.id.draw_insets_frame_layout);
+        mDrawInsetsFrameLayout = (DrawInsetsFrameLayout)
+                mRootView.findViewById(R.id.draw_insets_frame_layout);
         mDrawInsetsFrameLayout.setOnInsetsCallback(new DrawInsetsFrameLayout.OnInsetsCallback() {
             @Override
             public void onInsetsChanged(Rect insets) {
@@ -129,7 +126,7 @@ public class ArticleDetailFragment extends Fragment implements
             }
         });
 
-        mScrollView = mRootView.findViewById(R.id.scrollview);
+        mScrollView = (ObservableScrollView) mRootView.findViewById(R.id.scrollview);
         mScrollView.setCallbacks(new ObservableScrollView.Callbacks() {
             @Override
             public void onScrollChanged() {
@@ -140,8 +137,9 @@ public class ArticleDetailFragment extends Fragment implements
             }
         });
 
-        mPhotoView = mRootView.findViewById(R.id.photo);
+        mPhotoView = (ImageView) mRootView.findViewById(R.id.photo);
         mPhotoContainerView = mRootView.findViewById(R.id.photo_container);
+
         mStatusBarColorDrawable = new ColorDrawable(0);
 
         mRootView.findViewById(R.id.share_fab).setOnClickListener(new View.OnClickListener() {
@@ -180,7 +178,13 @@ public class ArticleDetailFragment extends Fragment implements
     }
 
     static float constrain(float val, float min, float max) {
-        return Math.max(min, Math.min(val, max));
+        if (val < min) {
+            return min;
+        } else if (val > max) {
+            return max;
+        } else {
+            return val;
+        }
     }
 
     private Date parsePublishedDate() {
@@ -188,7 +192,7 @@ public class ArticleDetailFragment extends Fragment implements
             String date = mCursor.getString(ArticleLoader.Query.PUBLISHED_DATE);
             return dateFormat.parse(date);
         } catch (ParseException ex) {
-            Log.e(TAG, String.valueOf(ex));
+            Log.e(TAG, ex.getMessage());
             Log.i(TAG, "passing today's date");
             return new Date();
         }
@@ -199,10 +203,10 @@ public class ArticleDetailFragment extends Fragment implements
             return;
         }
 
-        TextView titleView = mRootView.findViewById(R.id.article_title);
-        TextView bylineView = mRootView.findViewById(R.id.article_byline);
+        TextView titleView = (TextView) mRootView.findViewById(R.id.article_title);
+        TextView bylineView = (TextView) mRootView.findViewById(R.id.article_byline);
         bylineView.setMovementMethod(new LinkMovementMethod());
-        TextView bodyView = mRootView.findViewById(R.id.article_body);
+        TextView bodyView = (TextView) mRootView.findViewById(R.id.article_body);
 
 
         bodyView.setTypeface(Typeface.createFromAsset(getResources().getAssets(), "Rosario-Regular.ttf"));
@@ -221,39 +225,24 @@ public class ArticleDetailFragment extends Fragment implements
                                 DateUtils.FORMAT_ABBREV_ALL).toString()
                                 + " by <font color='#ffffff'>"
                                 + mCursor.getString(ArticleLoader.Query.AUTHOR)
-                                + "</font>",
-                        Html.FROM_HTML_MODE_LEGACY)
-                );
+                                + "</font>"));
 
             } else {
                 // If date is before 1902, just show the string
-                bylineView.setText(
-                    Html.fromHtml(
-                outputFormat.format(publishedDate)
-                        + " by <font color='#ffffff'>"
+                bylineView.setText(Html.fromHtml(
+                        outputFormat.format(publishedDate) + " by <font color='#ffffff'>"
                         + mCursor.getString(ArticleLoader.Query.AUTHOR)
-                        + "</font>",
-                        Html.FROM_HTML_MODE_LEGACY
-                    )
-                );
+                                + "</font>"));
 
             }
-            bodyView.setText(
-                Html.fromHtml(
-                    mCursor
-                        .getString(ArticleLoader.Query.BODY)
-                        .replaceAll("(\r\n|\n)", "<br />"),
-                    Html.FROM_HTML_MODE_LEGACY
-                )
-            );
+            bodyView.setText(Html.fromHtml(mCursor.getString(ArticleLoader.Query.BODY).replaceAll("(\r\n|\n)", "<br />")));
             String url = mCursor.getString(ArticleLoader.Query.PHOTO_URL);
-            Picasso.get().load(url).into(mPhotoView,
+            Picasso.with(this.getActivity().getApplicationContext()).load(url).into(mPhotoView,
                     PicassoPalette.with(url, mPhotoView)
                             .use(PicassoPalette.Profile.MUTED_DARK)
                             .intoBackground(mMetaBar)
                             .intoTextColor(titleView, PicassoPalette.Swatch.TITLE_TEXT_COLOR)
             );
-
         } else {
             mRootView.setVisibility(View.GONE);
             titleView.setText("N/A");

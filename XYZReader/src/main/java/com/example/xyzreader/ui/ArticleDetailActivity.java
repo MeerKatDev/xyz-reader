@@ -6,15 +6,15 @@ import android.app.LoaderManager;
 import android.content.Loader;
 import android.database.Cursor;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.v13.app.FragmentStatePagerAdapter;
+import android.support.v4.view.ViewPager;
+import android.support.v7.app.AppCompatActivity;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.legacy.app.FragmentStatePagerAdapter;
-import androidx.viewpager.widget.ViewPager;
 
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
@@ -41,24 +41,23 @@ public class ArticleDetailActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+        }
         setContentView(R.layout.activity_article_detail);
 
         getLoaderManager().initLoader(0, null, this);
 
         mPagerAdapter = new MyPagerAdapter(getFragmentManager());
-        mPager = findViewById(R.id.pager);
+        mPager = (ViewPager) findViewById(R.id.pager);
         mPager.setAdapter(mPagerAdapter);
         mPager.setPageMargin((int) TypedValue
-                .applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1,
-                        getResources().getDisplayMetrics()));
+                .applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics()));
         mPager.setPageMarginDrawable(new ColorDrawable(0x22000000));
 
         mPager.setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
-
             @Override
             public void onPageScrollStateChanged(int state) {
                 super.onPageScrollStateChanged(state);
@@ -71,8 +70,8 @@ public class ArticleDetailActivity extends AppCompatActivity
             public void onPageSelected(int position) {
                 if (mCursor != null) {
                     mCursor.moveToPosition(position);
-                    mSelectedItemId = mCursor.getLong(ArticleLoader.Query._ID);
                 }
+                mSelectedItemId = mCursor.getLong(ArticleLoader.Query._ID);
                 updateUpButtonPosition();
             }
         });
@@ -87,16 +86,18 @@ public class ArticleDetailActivity extends AppCompatActivity
             }
         });
 
-        mUpButtonContainer.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
-            @Override
-            public WindowInsets onApplyWindowInsets(View view, WindowInsets windowInsets) {
-                view.onApplyWindowInsets(windowInsets);
-                mTopInset = windowInsets.getSystemWindowInsetTop();
-                mUpButtonContainer.setTranslationY(mTopInset);
-                updateUpButtonPosition();
-                return windowInsets;
-            }
-        });
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mUpButtonContainer.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+                @Override
+                public WindowInsets onApplyWindowInsets(View view, WindowInsets windowInsets) {
+                    view.onApplyWindowInsets(windowInsets);
+                    mTopInset = windowInsets.getSystemWindowInsetTop();
+                    mUpButtonContainer.setTranslationY(mTopInset);
+                    updateUpButtonPosition();
+                    return windowInsets;
+                }
+            });
+        }
 
         if (savedInstanceState == null) {
             if (getIntent() != null && getIntent().getData() != null) {
@@ -151,7 +152,7 @@ public class ArticleDetailActivity extends AppCompatActivity
     }
 
     private class MyPagerAdapter extends FragmentStatePagerAdapter {
-        MyPagerAdapter(FragmentManager fm) {
+        public MyPagerAdapter(FragmentManager fm) {
             super(fm);
         }
 
