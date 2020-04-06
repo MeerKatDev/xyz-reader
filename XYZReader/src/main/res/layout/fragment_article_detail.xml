@@ -44,7 +44,7 @@
                 android:maxWidth="@dimen/detail_card_max_width"
                 android:background="#fff"
                 android:elevation="2dp"
-                android:layout_marginTop="@dimen/detail_card_top_margin">
+                android:layout_below="@dimen/detail_card_top_margin">
 
                 <LinearLayout
                     android:id="@+id/meta_bar"
