@@ -13,25 +13,28 @@ import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
 import com.example.xyzreader.data.ItemsContract;
 import com.example.xyzreader.data.UpdaterService;
+import com.squareup.picasso.Picasso;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
-/**
+import java.util.Locale;
+/*
  * Lyla says:
  * “This app is starting to shape up but it feels a bit off in quite a few places. I can't put finger on it but it feels odd.”
  *
@@ -60,13 +63,11 @@ public class ArticleListActivity extends AppCompatActivity implements
         LoaderManager.LoaderCallbacks<Cursor> {
 
     private static final String TAG = ArticleListActivity.class.toString();
-    private Toolbar mToolbar;
     private SwipeRefreshLayout mSwipeRefreshLayout;
     private RecyclerView mRecyclerView;
-
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss", Locale.GERMAN);
     // Use default locale format
-    private SimpleDateFormat outputFormat = new SimpleDateFormat();
+    private SimpleDateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.GERMAN);
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
 
@@ -74,17 +75,9 @@ public class ArticleListActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_article_list);
-
-        mToolbar = (Toolbar) findViewById(R.id.toolbar);
-
-
-        final View toolbarContainerView = findViewById(R.id.toolbar_container);
-
-        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
-
-        mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+        mSwipeRefreshLayout = findViewById(R.id.swipe_refresh_layout);
+        mRecyclerView = findViewById(R.id.recycler_view);
         getLoaderManager().initLoader(0, null, this);
-
         if (savedInstanceState == null) {
             refresh();
         }
@@ -146,7 +139,7 @@ public class ArticleListActivity extends AppCompatActivity implements
     private class Adapter extends RecyclerView.Adapter<ViewHolder> {
         private Cursor mCursor;
 
-        public Adapter(Cursor cursor) {
+        Adapter(Cursor cursor) {
             mCursor = cursor;
         }
 
@@ -156,6 +149,7 @@ public class ArticleListActivity extends AppCompatActivity implements
             return mCursor.getLong(ArticleLoader.Query._ID);
         }
 
+        @NotNull
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View view = getLayoutInflater().inflate(R.layout.list_item_article, parent, false);
@@ -175,7 +169,7 @@ public class ArticleListActivity extends AppCompatActivity implements
                 String date = mCursor.getString(ArticleLoader.Query.PUBLISHED_DATE);
                 return dateFormat.parse(date);
             } catch (ParseException ex) {
-                Log.e(TAG, ex.getMessage());
+                Log.e(TAG, String.valueOf(ex));
                 Log.i(TAG, "passing today's date");
                 return new Date();
             }
@@ -194,17 +188,21 @@ public class ArticleListActivity extends AppCompatActivity implements
                                 System.currentTimeMillis(), DateUtils.HOUR_IN_MILLIS,
                                 DateUtils.FORMAT_ABBREV_ALL).toString()
                                 + "<br/>" + " by "
-                                + mCursor.getString(ArticleLoader.Query.AUTHOR)));
+                                + mCursor.getString(ArticleLoader.Query.AUTHOR),
+                        Html.FROM_HTML_MODE_LEGACY));
             } else {
                 holder.subtitleView.setText(Html.fromHtml(
                         outputFormat.format(publishedDate)
                         + "<br/>" + " by "
-                        + mCursor.getString(ArticleLoader.Query.AUTHOR)));
+                        + mCursor.getString(ArticleLoader.Query.AUTHOR), Html.FROM_HTML_MODE_LEGACY));
             }
-            holder.thumbnailView.setImageUrl(
-                    mCursor.getString(ArticleLoader.Query.THUMB_URL),
-                    ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
-            holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
+            Picasso.get()
+                    .load(mCursor.getString(ArticleLoader.Query.THUMB_URL))
+                    //.resize(200, 200)
+                    .fit()
+                    .centerInside()
+                    .into(holder.thumbnailView);
+            //holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
         }
 
         @Override
@@ -213,12 +211,12 @@ public class ArticleListActivity extends AppCompatActivity implements
         }
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        public DynamicHeightNetworkImageView thumbnailView;
-        public TextView titleView;
-        public TextView subtitleView;
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        ImageView thumbnailView;
+        TextView titleView;
+        TextView subtitleView;
 
-        public ViewHolder(View view) {
+        ViewHolder(View view) {
             super(view);
             thumbnailView = view.findViewById(R.id.thumbnail);
             titleView = view.findViewById(R.id.article_title);

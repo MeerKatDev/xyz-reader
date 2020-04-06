@@ -16,6 +16,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 
 import android.os.Bundle;
 import android.text.Html;
@@ -66,9 +67,9 @@ public class ArticleDetailFragment extends Fragment implements
     private int mStatusBarFullOpacityBottom;
     private View mMetaBar;
 
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss");
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.sss", Locale.GERMAN);
     // Use default locale format
-    private SimpleDateFormat outputFormat = new SimpleDateFormat();
+    private SimpleDateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.sss", Locale.GERMAN);
     // Most time functions can only handle 1902 - 2037
     private GregorianCalendar START_OF_EPOCH = new GregorianCalendar(2,1,1);
 
@@ -141,7 +142,6 @@ public class ArticleDetailFragment extends Fragment implements
 
         mPhotoView = mRootView.findViewById(R.id.photo);
         mPhotoContainerView = mRootView.findViewById(R.id.photo_container);
-
         mStatusBarColorDrawable = new ColorDrawable(0);
 
         mRootView.findViewById(R.id.share_fab).setOnClickListener(new View.OnClickListener() {
@@ -188,7 +188,7 @@ public class ArticleDetailFragment extends Fragment implements
             String date = mCursor.getString(ArticleLoader.Query.PUBLISHED_DATE);
             return dateFormat.parse(date);
         } catch (ParseException ex) {
-            Log.e(TAG, ex.getMessage());
+            Log.e(TAG, String.valueOf(ex));
             Log.i(TAG, "passing today's date");
             return new Date();
         }
@@ -227,11 +227,15 @@ public class ArticleDetailFragment extends Fragment implements
 
             } else {
                 // If date is before 1902, just show the string
-                bylineView.setText(Html.fromHtml(
-                        outputFormat.format(publishedDate) + " by <font color='#ffffff'>"
+                bylineView.setText(
+                    Html.fromHtml(
+                outputFormat.format(publishedDate)
+                        + " by <font color='#ffffff'>"
                         + mCursor.getString(ArticleLoader.Query.AUTHOR)
-                                + "</font>",
-                        Html.FROM_HTML_MODE_LEGACY));
+                        + "</font>",
+                        Html.FROM_HTML_MODE_LEGACY
+                    )
+                );
 
             }
             bodyView.setText(
