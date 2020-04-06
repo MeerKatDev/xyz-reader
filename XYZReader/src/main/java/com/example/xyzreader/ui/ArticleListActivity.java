@@ -8,11 +8,6 @@ import android.content.IntentFilter;
 import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
-//import android.support.v4.widget.SwipeRefreshLayout;
-//import android.support.v7.app.AppCompatActivity;
-//import android.support.v7.widget.RecyclerView;
-//import android.support.v7.widget.StaggeredGridLayoutManager;
-//import android.support.v7.widget.Toolbar;
 import android.text.Html;
 import android.text.format.DateUtils;
 import android.util.Log;
@@ -22,6 +17,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.StaggeredGridLayoutManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -35,6 +31,24 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.GregorianCalendar;
+/**
+ * Lyla says:
+ * “This app is starting to shape up but it feels a bit off in quite a few places. I can't put finger on it but it feels odd.”
+ *
+ * Jay says:
+ * “Is the text supposed to be so wonky and unreadable? It is not accessible to those of us without perfect vision."
+ *
+ * Kagure says:
+ * “The color scheme is really sad and I shouldn't feel sad.”
+ *
+ * https://review.udacity.com/#!/projects/4035898751/rubric
+ *
+ * put a nice grid or list in the main activity (maybe use cards?)
+ * change contrast of the text
+ * detail view in general is to fix
+ * it flickers and it's slow
+ */
+
 
 /**
  * An activity representing a list of Articles. This activity has different presentations for
@@ -120,9 +134,8 @@ public class ArticleListActivity extends AppCompatActivity implements
         adapter.setHasStableIds(true);
         mRecyclerView.setAdapter(adapter);
         int columnCount = getResources().getInteger(R.integer.list_column_count);
-        StaggeredGridLayoutManager sglm =
-                new StaggeredGridLayoutManager(columnCount, StaggeredGridLayoutManager.VERTICAL);
-        mRecyclerView.setLayoutManager(sglm);
+        GridLayoutManager glm = new GridLayoutManager(this, columnCount);
+        mRecyclerView.setLayoutManager(glm);
     }
 
     @Override
